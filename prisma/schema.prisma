@@ -1,0 +1,85 @@
+// Evolve Meter Pro Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // Easily switch to "postgresql" later
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  password      String?   // For authentication
+  role          String    @default("TEACHER") // "TEACHER", "PARENT", "CHILD"
+  meterId       String?   @unique
+  
+  // Relationships
+  meter         Meter?    @relation(fields: [meterId], references: [id])
+  needs         Need[]    @relation("Owner")
+  fulfilled     Need[]    @relation("Fulfiller")
+  
+  // Gamification
+  points        Int       @default(0)
+  level         Int       @default(1)
+  badges        Badge[]
+  activities    Activity[]
+
+  createdAt     DateTime  @default(now())
+}
+
+model Meter {
+  id              String   @id @default(cuid())
+  meterNumber     String   @unique
+  joulesGenerated Float    @default(0)
+  joulesNeeded    Float    @default(0)
+  joulesFulfilled Float    @default(0)
+  
+  user            User?
+  activities      Activity[]
+  
+  createdAt       DateTime @default(now())
+}
+
+model Need {
+  id              String   @id @default(cuid())
+  title           String
+  description     String?
+  status          String   @default("LOGGED") // "LOGGED", "IN_PROGRESS", "FULFILLED"
+  category        String?  
+  jouleProxy      Float    @default(0)
+  
+  // Owner
+  userId          String
+  user            User     @relation("Owner", fields: [userId], references: [id])
+
+  // Fulfiller
+  fulfilledById   String?
+  fulfilledBy     User?    @relation("Fulfiller", fields: [fulfilledById], references: [id])
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  name        String
+  icon        String   // Emoji or icon name
+  description String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String   // "LOGGED", "FULFILLED", "JOINED"
+  message     String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  meterId     String?
+  meter       Meter?   @relation(fields: [meterId], references: [id])
+  createdAt   DateTime @default(now())
+}
